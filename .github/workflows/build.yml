@@ -12,16 +12,22 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    # Langkah otomatis untuk mengekstrak file zip Anda di server
     - name: Unzip Source Code
       run: |
         unzip -o "*.zip" -d extracted_source || true
-        # Memindahkan file ke folder utama jika terbungkus folder dalam zip
-        if [ -d "extracted_source/RewardSystem-source" ]; then
-          mv extracted_source/RewardSystem-source/* .
-        elif [ "$(ls -A extracted_source)" ]; then
-          mv extracted_source/* .
+        
+        # Mencari lokasi file pom.xml atau build.gradle secara mendalam
+        CONFIG_PATH=$(find extracted_source -name "pom.xml" -o -name "build.gradle" -o -name "build.gradle.kts" | head -n 1)
+        
+        if [ -z "$CONFIG_PATH" ]; then
+          echo "Error: File pom.xml atau build.gradle benar-benar tidak ada di dalam ZIP!" && exit 1
         fi
+        
+        # Pindahkan isi dari folder proyek tersebut ke root direktori kerja
+        PROJ_DIR=$(dirname "$CONFIG_PATH")
+        mv "$PROJ_DIR"/* . || true
+        # Pindahkan juga file tersembunyi jika ada (seperti .gradle atau gradlew)
+        mv "$PROJ_DIR"/.* . || true
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -37,7 +43,7 @@ jobs:
           chmod +x gradlew || true
           ./gradlew build || gradle build
         else
-          echo "File Maven/Gradle tidak ditemukan di root zip!" && exit 1
+          echo "Gagal mendeteksi file konfigurasi setelah pemindahan!" && exit 1
         fi
 
     - name: Upload Artifact
