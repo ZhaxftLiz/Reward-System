@@ -38,13 +38,17 @@ jobs:
     - name: Build Project
       run: |
         if [ -f "pom.xml" ]; then
+          # Trik otomatis untuk membersihkan error systemPath yang bikin gagal
+          sed -i '/<systemPath>/d' pom.xml || true
+          sed -i 's/<scope>system<\/scope>/<scope>provided<\/scope>/g' pom.xml || true
+          
           mvn clean package
         elif [ -f "build.gradle" ] || [ -f "build.gradle.kts" ]; then
           chmod +x gradlew || true
           ./gradlew build || gradle build
         else
           echo "Gagal mendeteksi file konfigurasi setelah pemindahan!" && exit 1
-        fi
+        fi 
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
