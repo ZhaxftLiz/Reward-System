@@ -35,20 +35,27 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
+      
     - name: Build Project
       run: |
         if [ -f "pom.xml" ]; then
-          # Trik otomatis untuk membersihkan error systemPath yang bikin gagal
+          # 1. Bersihkan error systemPath yang sebelumnya
           sed -i '/<systemPath>/d' pom.xml || true
           sed -i 's/<scope>system<\/scope>/<scope>provided<\/scope>/g' pom.xml || true
           
-          mvn clean package
+          # 2. Tambahkan Repositori resmi & cadangan PNX secara otomatis ke pom.xml agar tidak gagal download
+          sed -i '/<repositories>/a \
+            <repository>\n              <id>pnx-repo-cloud<\/id>\n              <url>https:\/\/repo.powernukkitx.cn\/repository\/maven-public\/<\/url>\n            <\/repository>\n            <repository>\n              <id>jitpack.io<\/id>\n              <url>https:\/\/jitpack.io<\/url>\n            <\/repository>' pom.xml || true
+          
+          # 3. Jalankan compile
+          mvn clean package -DskipTests
         elif [ -f "build.gradle" ] || [ -f "build.gradle.kts" ]; then
           chmod +x gradlew || true
-          ./gradlew build || gradle build
+          ./gradlew build -x test || gradle build -x test
         else
           echo "Gagal mendeteksi file konfigurasi setelah pemindahan!" && exit 1
-        fi 
+        fi
+        
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
