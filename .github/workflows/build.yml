@@ -1,0 +1,50 @@
+name: Build Plugin Otomatis
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # Langkah otomatis untuk mengekstrak file zip Anda di server
+    - name: Unzip Source Code
+      run: |
+        unzip -o "*.zip" -d extracted_source || true
+        # Memindahkan file ke folder utama jika terbungkus folder dalam zip
+        if [ -d "extracted_source/RewardSystem-source" ]; then
+          mv extracted_source/RewardSystem-source/* .
+        elif [ "$(ls -A extracted_source)" ]; then
+          mv extracted_source/* .
+        fi
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Build Project
+      run: |
+        if [ -f "pom.xml" ]; then
+          mvn clean package
+        elif [ -f "build.gradle" ] || [ -f "build.gradle.kts" ]; then
+          chmod +x gradlew || true
+          ./gradlew build || gradle build
+        else
+          echo "File Maven/Gradle tidak ditemukan di root zip!" && exit 1
+        fi
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: plugin-jar-file
+        path: |
+          target/*.jar
+          build/libs/*.jar
+          
